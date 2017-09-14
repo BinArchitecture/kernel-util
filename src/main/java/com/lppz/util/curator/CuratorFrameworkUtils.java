@@ -5,6 +5,9 @@ import java.net.InetAddress;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.ChildData;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.recipes.cache.TreeCache;
 import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
 import org.apache.curator.framework.recipes.cache.TreeCacheEvent.Type;
@@ -109,6 +112,31 @@ public class CuratorFrameworkUtils {
         });  
         //开始监听  
         treeCache.start();  
+	}
+	
+	public static void pathChildCache(CuratorFramework zkConn ,final String path,
+			final ZookeeperProcessListen zkListen) throws Exception{
+		PathChildrenCache pathChildCache = new PathChildrenCache(zkConn, path, true);  
+		//设置监听器和处理过程  
+		pathChildCache.getListenable().addListener(new PathChildrenCacheListener() {
+			
+			@Override
+			public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
+					throws Exception {
+					ChildData data = event.getData();  
+					if(data !=null){
+						if(event.getType() == org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type.CHILD_ADDED){
+							zkListen.watchPath(path, data.getPath());
+						}else{
+							zkListen.notifly(data.getPath());
+						}
+					}else{  
+						logger.debug( "data is null : "+ event.getType());  
+					}  
+			}
+		});
+		//开始监听  
+		pathChildCache.start();  
 	}
 
 	public static void createOfNotExist(CuratorFramework zkConn, String zkPath) throws Exception {
